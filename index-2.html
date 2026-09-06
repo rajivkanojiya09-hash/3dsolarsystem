@@ -1,0 +1,64 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>3D Solar System</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial;color:#fff;touch-action:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#title,#menu,#controls,#info{position:fixed;z-index:5;background:rgba(0,0,0,.78);border-radius:14px}
+#title{top:10px;left:10px;padding:10px 13px}#title b{font-size:18px}#title small{display:block;margin-top:4px;opacity:.8}
+#menu{left:10px;bottom:10px;padding:8px;width:140px;max-height:70vh;overflow:auto}
+#menu button,#controls button{width:100%;height:34px;margin:2px 0;border:0;border-radius:8px;background:#242424;color:#fff;font-weight:bold}
+#menu .head{text-align:center;margin-bottom:5px;font-size:13px}
+#controls{right:10px;bottom:10px;padding:10px;width:165px}
+#controls .z{display:flex;justify-content:center}#controls .z button{width:48px;margin:2px;font-size:21px}
+#speed{width:100%}#val{text-align:center;font-weight:bold}
+#info{top:75px;left:50%;transform:translateX(-50%);padding:7px 13px;opacity:0;transition:.2s}
+#info.show{opacity:1}
+@media(max-width:600px){#title b{font-size:15px}#title small{font-size:9px}#menu{width:120px;left:6px;bottom:6px}#controls{width:140px;right:6px;bottom:6px}}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="title"><b>🌌 3D SOLAR SYSTEM</b><small>Drag to rotate • Select a planet • Control speed</small></div>
+<div id="info"></div>
+<div id="menu"><div class="head">🪐 SELECT PLANET</div>
+<button data-p="Mercury">☿ Mercury</button><button data-p="Venus">♀ Venus</button>
+<button data-p="Earth">🌍 Earth</button><button data-p="Mars">🔴 Mars</button>
+<button data-p="Jupiter">🟠 Jupiter</button><button data-p="Saturn">🪐 Saturn</button>
+<button data-p="Uranus">🔵 Uranus</button><button data-p="Neptune">🔵 Neptune</button>
+<button id="all">🌌 Solar System</button></div>
+<div id="controls"><div class="z"><button id="plus">+</button><button id="minus">−</button></div>
+<div>🚀 Planet Speed</div><input id="speed" type="range" min="0" max="5" step=".1" value="1"><div id="val">1.0×</div></div>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d');let W,H,dpr;
+function size(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',size);size();
+const P=[
+['Mercury',3,48,'#aaa',.035],['Venus',5,72,'#e5ae66',.027],['Earth',7,98,'#2789e8',.022],
+['Mars',5,125,'#e34b32',.018],['Jupiter',15,165,'#d69b68',.009],['Saturn',13,215,'#d9b77d',.007],
+['Uranus',9,265,'#62dce8',.005],['Neptune',9,315,'#3b75e8',.003]];
+const stars=Array.from({length:350},()=>({x:Math.random(),y:Math.random(),r:.5+Math.random()*1.5}));
+let t=0,spd=1,zoom=1,targetZoom=1,sel=null,pitch=.62,drag=false,lx=0,ly=0;
+function drawSphere(px,py,r,col){let g=x.createRadialGradient(px-r*.35,py-r*.4,1,px,py,r);g.addColorStop(0,'#fff');g.addColorStop(.18,col);g.addColorStop(.8,col);g.addColorStop(1,'#030303');x.fillStyle=g;x.beginPath();x.arc(px,py,r,0,7);x.fill()}
+function render(){
+x.fillStyle='#000';x.fillRect(0,0,W,H);for(const s of stars){x.globalAlpha=.3+Math.random()*.5;x.fillStyle='#fff';x.beginPath();x.arc(s.x*W,s.y*H,s.r,0,7);x.fill()}x.globalAlpha=1;
+const S=Math.min(W,H)/760*zoom,cx=W/2,cy=H/2+20;
+for(const p of P){x.strokeStyle='rgba(160,170,190,.25)';x.beginPath();x.ellipse(cx,cy,p[1]*S,p[1]*S*Math.sin(pitch),0,0,7);x.stroke()}
+drawSphere(cx,cy,25*S,'#ffd21a');
+const arr=P.map((p,i)=>{let a=t*p[4]+i*.85;return {p,i,x:Math.cos(a)*p[1],y:Math.sin(a)*p[1]*Math.sin(pitch),z:Math.sin(a)*p[1]*Math.cos(pitch)}}).sort((a,b)=>a.z-b.z);
+for(const q of arr){const p=q.p,px=cx+q.x*S,py=cy+q.y*S,r=Math.max(2,p[2]*S);drawSphere(px,py,r,p[3]);
+if(p[0]==='Saturn'){x.strokeStyle='#ead7a8';x.lineWidth=Math.max(2,S*2);x.beginPath();x.ellipse(px,py,r*1.8,r*.65,-.25,0,7);x.stroke()}
+if(p[0]==='Earth'){let a=t*.04,mx=px+Math.cos(a)*13*S,my=py+Math.sin(a)*13*S*Math.sin(pitch);drawSphere(mx,my,Math.max(1.5,1.6*S),'#ccc')}
+if(!sel||sel===p[0]){x.font='bold 13px Arial';x.textAlign='center';x.fillStyle='#fff';x.fillText(p[0],px,py-r-7)}
+if(sel===p[0]){x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();x.arc(px,py,r+7,0,7);x.stroke()}}
+}
+function loop(){t+=.45*spd;zoom+=(targetZoom-zoom)*.06;render();requestAnimationFrame(loop)}loop();
+function select(name){sel=name;let p=P.find(q=>q[0]===name);targetZoom=Math.max(1.35,Math.min(2.8,300/(p[1]+80)));let i=document.getElementById('info');i.textContent='🚀 Viewing '+name;i.classList.add('show')}
+document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>select(b.dataset.p));
+document.getElementById('all').onclick=()=>{sel=null;targetZoom=1;document.getElementById('info').classList.remove('show')};
+document.getElementById('speed').oninput=e=>{spd=+e.target.value;document.getElementById('val').textContent=spd.toFixed(1)+'×'};
+document.getElementById('plus').onclick=()=>targetZoom=Math.min(3.5,targetZoom+.2);
+document.getElementById('minus').onclick=()=>targetZoom=Math.max(.7,targetZoom-.2);
+cv.onpointerdown=e=>{drag=true;lx=e.clientX;ly=e.clientY};addEventListener('pointerup',()=>drag=false);
+addEventListener('pointermove',e=>{if(!drag)return;pitch=Math.max(.25,Math.min(1.15,pitch+(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY});
+cv.onwheel=e=>{e.preventDefault();targetZoom=Math.max(.7,Math.min(3.5,targetZoom+(e.deltaY<0?.15:-.15)))};
+</script></body></html>
